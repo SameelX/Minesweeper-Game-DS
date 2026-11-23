@@ -8,35 +8,44 @@ using namespace std;
 class Board
 {
 private:
-    // 2D array to display hidden and revealed cells
+    // 2D array to store hidden and revealed cells
     char board[9][9];
 
     // 2D vector to store mine positions
     // 1 = Mine, 0 = Safe cell
     vector<vector<int>> mineBoard;
 
-    // Count mines around a selected cell
-    int countAdjacentMines(int row, int col);
+    // 2D array to store flags
+    bool flagged[9][9];
 
-    // Place 10 random mines
+    int countAdjacentMines(int row, int col);
     void placeMines();
 
+    // Automatically reveal neighboring safe cells
+    void floodReveal(int row, int col);
+
 public:
-    // Constructor
     Board();
 
-    // Initialize the board
     void resetBoard();
 
-    // Display the board
-    void displayBoard();
+    // Display board; showMines is true after Game Over
+    void displayBoard(bool showMines = false);
 
-    // Reveal a selected cell
-    // Returns false if the cell contains a mine
     bool revealCell(int row, int col);
 
-    // Count revealed safe cells
+    // Place or remove a flag
+    bool toggleFlag(int row, int col);
+
+    // Get information about cells
+    char getCell(int row, int col);
+    bool isMine(int row, int col);
+    bool isFlagged(int row, int col);
+
+    // Get game counters
     int getRevealedSafeCount();
+    int getFlagCount();
+    int getRemainingSafeCells();
 };
 
 #endif

@@ -20,23 +20,24 @@ Board::Board()
 // Initialize the board
 void Board::resetBoard()
 {
-    // Initialize the 2D array with hidden cells
+    // Initialize the 2D array and flags
     for (int i = 0; i < 9; i++)
     {
         for (int j = 0; j < 9; j++)
         {
             board[i][j] = '?';
+            flagged[i][j] = false;
         }
     }
 
-    // Initialize the 2D vector with zeros
+    // Initialize the 2D vector
     mineBoard.assign(9, vector<int>(9, 0));
 
-    // Place 10 random mines
+    // Place exactly 10 mines
     placeMines();
 }
 
-// Place exactly 10 random mines
+// Place 10 random mines
 void Board::placeMines()
 {
     int count = 0;
@@ -46,7 +47,6 @@ void Board::placeMines()
         int row = rand() % 9;
         int col = rand() % 9;
 
-        // Check that the cell does not already contain a mine
         if (mineBoard[row][col] == 0)
         {
             mineBoard[row][col] = 1;
@@ -67,7 +67,6 @@ int Board::countAdjacentMines(int row, int col)
             int newRow = row + i;
             int newCol = col + j;
 
-            // Check board boundaries
             if (newRow >= 0 && newRow < 9 &&
                 newCol >= 0 && newCol < 9)
             {
@@ -82,12 +81,11 @@ int Board::countAdjacentMines(int row, int col)
     return count;
 }
 
-// Display the game board
-void Board::displayBoard()
+// Display the board
+void Board::displayBoard(bool showMines)
 {
     cout << "\n    ";
 
-    // Display column numbers
     for (int j = 0; j < 9; j++)
     {
         cout << j << " ";
@@ -95,44 +93,153 @@ void Board::displayBoard()
 
     cout << endl;
 
-    // Display rows and cells
     for (int i = 0; i < 9; i++)
     {
         cout << i << " | ";
 
         for (int j = 0; j < 9; j++)
         {
-            cout << board[i][j] << " ";
+            if (showMines && mineBoard[i][j] == 1)
+            {
+                cout << "* ";
+            }
+            else if (flagged[i][j])
+            {
+                cout << "F ";
+            }
+            else
+            {
+                cout << board[i][j] << " ";
+            }
         }
 
         cout << endl;
     }
 }
 
+// Automatically reveal safe neighboring cells
+void Board::floodReveal(int row, int col)
+{
+    // Stop if outside the board
+    if (row < 0 || row >= 9 || col < 0 || col >= 9)
+    {
+        return;
+    }
+
+    // Stop if already revealed or flagged
+    if (board[row][col] != '?' || flagged[row][col])
+    {
+        return;
+    }
+
+    // Never reveal a mine through this function
+    if (mineBoard[row][col] == 1)
+    {
+        return;
+    }
+
+    // Count nearby mines and reveal the cell
+    int mines = countAdjacentMines(row, col);
+    board[row][col] = '0' + mines;
+
+    // If there are no nearby mines, reveal neighbors too
+    if (mines == 0)
+    {
+        for (int i = -1; i <= 1; i++)
+        {
+            for (int j = -1; j <= 1; j++)
+            {
+                if (i != 0 || j != 0)
+                {
+                    floodReveal(row + i, col + j);
+                }
+            }
+        }
+    }
+}
+
 // Reveal a selected cell
 bool Board::revealCell(int row, int col)
 {
-    // Check valid row and column
+    // Check valid position
     if (row < 0 || row >= 9 || col < 0 || col >= 9)
     {
         return false;
     }
 
-    // Check if selected cell contains a mine
+    // Do not reveal a flagged cell
+    if (flagged[row][col])
+    {
+        return true;
+    }
+
+    // Check if selected cell is a mine
     if (mineBoard[row][col] == 1)
     {
         return false;
     }
 
-    // Count nearby mines and reveal the number
-    int mines = countAdjacentMines(row, col);
-
-    board[row][col] = '0' + mines;
+    // Automatically reveal neighboring safe cells if possible
+    floodReveal(row, col);
 
     return true;
 }
 
-// Count all revealed safe cells
+// Place or remove a flag
+bool Board::toggleFlag(int row, int col)
+{
+    // Check valid position
+    if (row < 0 || row >= 9 || col < 0 || col >= 9)
+    {
+        return false;
+    }
+
+    // A revealed cell cannot be flagged
+    if (board[row][col] != '?')
+    {
+        return false;
+    }
+
+    // Change flag status
+    flagged[row][col] = !flagged[row][col];
+
+    return true;
+}
+
+// Get the value of a cell
+char Board::getCell(int row, int col)
+{
+    if (row < 0 || row >= 9 || col < 0 || col >= 9)
+    {
+        return '?';
+    }
+
+    return board[row][col];
+}
+
+// Check whether a cell contains a mine
+bool Board::isMine(int row, int col)
+{
+    if (row < 0 || row >= 9 || col < 0 || col >= 9)
+    {
+        return false;
+    }
+
+    return mineBoard[row][col] == 1;
+}
+
+// Check whether a cell is flagged
+bool Board::isFlagged(int row, int col)
+{
+    if (row < 0 || row >= 9 || col < 0 || col >= 9)
+    {
+        return false;
+    }
+
+    return flagged[row][col];
+}
+
+// Count revealed safe cells
 int Board::getRevealedSafeCount()
 {
     int count = 0;
@@ -149,4 +256,29 @@ int Board::getRevealedSafeCount()
     }
 
     return count;
+}
+
+// Count placed flags
+int Board::getFlagCount()
+{
+    int count = 0;
+
+    for (int i = 0; i < 9; i++)
+    {
+        for (int j = 0; j < 9; j++)
+        {
+            if (flagged[i][j])
+            {
+                count++;
+            }
+        }
+    }
+
+    return count;
+}
+
+// Count remaining hidden safe cells
+int Board::getRemainingSafeCells()
+{
+    return 81 - 10 - getRevealedSafeCount();
 }
