@@ -1,8 +1,7 @@
 #include "board.h"
 #include <cstdlib>
 #include <ctime>
-
-// Constructor
+//constractor
 Board::Board()
 {
     // Seed random numbers only once
